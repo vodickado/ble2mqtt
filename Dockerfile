@@ -18,9 +18,9 @@ RUN pip install --user --no-warn-script-location .
 # Second stage
 FROM python:3-slim as app
 
-ENV ROOTLESS_UID 1001
-ENV ROOTLESS_GID 1001
-ENV ROOTLESS_NAME "rootless"
+ENV ROOTLESS_UID 1000
+ENV ROOTLESS_GID 1000
+ENV ROOTLESS_NAME "root"
 
 # Bluetoothctl is required
 RUN apt-get update && \
@@ -28,17 +28,25 @@ RUN apt-get update && \
     apt-get clean
 
 # Copy the local python packages
-RUN groupadd --gid ${ROOTLESS_GID} ${ROOTLESS_NAME} && \
-    useradd --gid ${ROOTLESS_GID} --uid ${ROOTLESS_UID} -d /home/${ROOTLESS_NAME} ${ROOTLESS_NAME}
+#RUN groupadd --gid ${ROOTLESS_GID} ${ROOTLESS_NAME} && \
+#    useradd --gid ${ROOTLESS_GID} --uid ${ROOTLESS_UID} -d /home/${ROOTLESS_NAME} ${ROOTLESS_NAME}
 
-COPY --from=builder /root/.local /home/${ROOTLESS_NAME}/.local
+
+
+COPY --from=builder /root/.local /${ROOTLESS_NAME}/.local
 
 # Copy run script
-COPY ./docker_entrypoint.sh /home/${ROOTLESS_NAME}/docker_entrypoint.sh
-RUN chmod +x /home/${ROOTLESS_NAME}/docker_entrypoint.sh
-RUN chown -R ${ROOTLESS_UID}:${ROOTLESS_GID} /home/${ROOTLESS_NAME}
+COPY ./docker_entrypoint.sh /${ROOTLESS_NAME}/docker_entrypoint.sh
+RUN chmod +x /${ROOTLESS_NAME}/docker_entrypoint.sh
+RUN chown -R ${ROOTLESS_UID}:${ROOTLESS_GID} /${ROOTLESS_NAME}
 
-ENV PATH=/home/rootless/.local/bin:$PATH
+RUN mkdir /var/run/dbus
+RUN chmod -R 777 /var/run/dbus
+RUN chmod -R 777 /run/dbus/
+#RUN mkdir /run/dbus/
+#RUN chown -R ${ROOTLESS_UID}:${ROOTLESS_GID} /var/run/dbus
+
+ENV PATH=/root/.local/bin:$PATH
 
 USER ${ROOTLESS_NAME}
-CMD [ "/home/rootless/docker_entrypoint.sh" ]
+CMD [ "/root/docker_entrypoint.sh" ]
